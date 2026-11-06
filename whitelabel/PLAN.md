@@ -305,10 +305,17 @@ my/release    ←（可选）发布分支，由 dev 合并，打 tag
 - [x] GUI 路由 8 个（`internal/gui/onboard.go`）+ CLI `magpie onboard …`
 - [x] 验收通过：本地模拟中转站，登录 → 自动建 Key → `acme-relay` 就绪（ready: true）→ finish
 
-### 阶段 4 · 功能对齐（可选，按需）
-- [ ] 本地路由线路切换 UI（网关能力已有，做界面）
-- [ ] MCP / 提示词 / Skills / 会话页面
-- [ ] 工具检测与一键安装（winget/npm/brew/scoop）
+### 阶段 4 · 功能对齐（大部分可复用上游）
+- [x] 多线路自动切换：配置的 `provider.lines` 自动生成每线路一个 provider，
+      再加一个路由组（每模型的各线路相邻），网关按顺序 failover —— 即
+      「线路出问题，自动换一条」
+- [x] 线路状态：`magpie onboard lines check` 与 `GET /api/onboard/lines?probe=1`
+      并发探测每条线路的延迟，引导页在接入后展示
+- [x] MCP / 提示词 / Skills / 会话页面：上游已有，品牌文案由 `t()` 覆盖层自动替换
+- [x] 工具检测：上游已有（`agent.Detected`），引导页按检测结果显示
+- [x] 线路切换：选不同线路的 provider 即可（上游 Providers/Agents 页面）
+- [ ] 工具一键安装：上游的既有设计是「展示安装命令」，不代执行（全局 npm
+      前缀可能需 sudo、新机器缺 Node.js）；如要自动执行需另做，风险较高
 
 ### 阶段 5 · 发布流水线（脚本已完成，待真实域名）
 - [x] `whitelabel/build.sh` 三平台构建 + zip + feed 生成
