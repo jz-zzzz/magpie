@@ -3,8 +3,7 @@
   "brand": {
     "name": "Lyy.team桌面助手",
     "shortName": "Lyy.team",
-    "site": "https://api2.lyy.team",
-    "icon": "https://api2.lyy.team/icon-256.png"
+    "site": "https://api2.lyy.team"
   },
   "updates": {
     "feed": "https://api2.lyy.team/api/desktop/latest",
