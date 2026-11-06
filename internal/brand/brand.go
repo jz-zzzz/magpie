@@ -307,6 +307,16 @@ func KeepFresh(ctx context.Context) {
 	}
 }
 
+// Reset puts the package back to Default and lets the next Load run: a
+// test's, which builds several configs in one process.
+func Reset() {
+	mu.Lock()
+	current = Default()
+	loaded = make(chan struct{})
+	loadOnce = sync.Once{}
+	mu.Unlock()
+}
+
 func readCache() {
 	b, err := os.ReadFile(cacheFile())
 	if err != nil {

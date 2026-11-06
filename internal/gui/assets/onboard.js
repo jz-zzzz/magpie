@@ -139,7 +139,13 @@
       body.append(el("div", { className: "wl-row" }, [next]));
       next.onclick = () => show(2);
       post("relay")
-        .then(() => { note.textContent = say("Done — the relay is added.", "完成，中转站已添加。"); next.disabled = false; })
+        .then((out) => {
+          note.textContent = say("Done — the relay is added.", "完成，中转站已添加。");
+          if (out?.group) {
+            note.textContent += " " + say("Its lines fail over to each other.", "线路之间会自动切换。");
+          }
+          next.disabled = false;
+        })
         .catch((e) => {
           note.textContent = "";
           errLine.textContent = e.message + " " + say("You can also paste a key later under Providers.", "也可以稍后在 Providers 里粘贴 Key。");

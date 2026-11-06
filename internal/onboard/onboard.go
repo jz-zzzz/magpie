@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/yetone/magpie/internal/agent"
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/brand"
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/provider"
 )
 
@@ -29,6 +31,9 @@ type Status struct {
 	User      string `json:"user,omitempty"`
 	// Provider is the relay's provider id once added, "" before.
 	Provider string `json:"provider,omitempty"`
+	// Group is the routing group over the relay's lines once made, "" when
+	// the config names no lines.
+	Group string `json:"group,omitempty"`
 	// Done is set once the first run finished; the window stops showing it.
 	Done bool `json:"done"`
 	// Detected are the agents found on this machine, with whether each is
@@ -52,7 +57,10 @@ type Runner struct {
 // keptState is the part of a run kept on disk between launches.
 type keptState struct {
 	Provider string `json:"provider,omitempty"`
-	Done     bool   `json:"done,omitempty"`
+	// Group is the routing group over the relay's lines, "" when the
+	// config names none.
+	Group string `json:"group,omitempty"`
+	Done  bool   `json:"done,omitempty"`
 }
 
 func stateFile() string { return filepath.Join(appdir.Config(), "onboard.json") }
@@ -82,6 +90,7 @@ func (r *Runner) Status() Status {
 		SignedIn:  r.c.SignedIn(),
 		User:      r.c.Session().User,
 		Provider:  r.kept.Provider,
+		Group:     r.kept.Group,
 		Done:      r.kept.Done,
 	}
 	for _, a := range agent.Detected() {
@@ -146,14 +155,76 @@ func (r *Runner) AddRelay(ctx context.Context) (string, error) {
 	}
 	// the models, so an agent has something to pick; a relay that doesn't
 	// answer the list is no reason to fail the run
+	var models []catalog.Model
 	if saved, err := provider.Find(id); err == nil {
 		fctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		_, _ = saved.Fetch(fctx)
+		models, _ = saved.Fetch(fctx)
 		cancel()
 	}
 	r.kept.Provider = id
+	// the lines the config names: one provider each, and a routing group
+	// over them that the gateway fails over between
+	if len(b.Lines) > 0 && len(models) > 0 {
+		if gid := r.addLines(context.WithoutCancel(ctx), id, b, models, key.Key); gid != "" {
+			r.kept.Group = gid
+		}
+	}
 	r.save()
 	return id, nil
+}
+
+// addLines adds one provider per line the relay's config names and a
+// routing group whose members are each model on each line, the lines' own
+// order kept: a line that times out or fails is passed over for the next
+// on the same model (the gateway's fallback), which is what "线路出问题，
+// 自动换一条" means. The main provider's line comes first. "" when fewer
+// than two lines were added, a group of one being no failover.
+func (r *Runner) addLines(ctx context.Context, main string, b *brand.Provider, models []catalog.Model, key string) string {
+	ids := []string{main}
+	for _, ln := range b.Lines {
+		lp := provider.Provider{
+			Name:      b.Name + " · " + ln.Name,
+			Chat:      ln.Chat,
+			Responses: ln.Responses,
+			Anthropic: ln.Anthropic,
+			KeysURL:   b.KeysURL,
+			Website:   b.Website,
+			Key:       key,
+		}
+		lid, err := provider.Add(lp)
+		if err != nil {
+			continue
+		}
+		if saved, err := provider.Find(lid); err == nil {
+			fctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			_, _ = saved.Fetch(fctx)
+			cancel()
+		}
+		ids = append(ids, lid)
+	}
+	if len(ids) < 2 {
+		return ""
+	}
+	// each model on each line, in the line order: the same model is tried
+	// on the next line before the next model
+	var members []string
+	for _, m := range models {
+		for _, lid := range ids {
+			members = append(members, lid+"/"+m.ID)
+		}
+	}
+	g := provider.Group{
+		ID:      main + "-lines",
+		Name:    b.Name + " · 线路",
+		Members: members,
+	}
+	if err := provider.SaveGroup(g); err != nil {
+		// the relay is added either way; the lines' group is the part
+		// that didn't take, and its reason belongs in the log
+		fmt.Fprintf(os.Stderr, "onboard: lines group: %v\n", err)
+		return ""
+	}
+	return g.ID
 }
 
 // Connect connects the named agents to magpie, each with its own error.

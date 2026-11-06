@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/yetone/magpie/internal/brand"
+	"github.com/yetone/magpie/internal/provider"
 )
 
 func TestOpenNilWithoutSignIn(t *testing.T) {
+	brand.Reset()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("MAGPIE_BRAND_CONFIG", "off")
 	if r := Open(); r != nil {
@@ -23,6 +26,7 @@ func TestOpenNilWithoutSignIn(t *testing.T) {
 }
 
 func TestSignInAndAddRelay(t *testing.T) {
+	brand.Reset()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 
@@ -103,5 +107,86 @@ func TestSignInAndAddRelay(t *testing.T) {
 	}
 	if !r.Status().Done {
 		t.Fatal("Finish did not mark done")
+	}
+}
+
+func TestAddRelayMakesLinesAndGroup(t *testing.T) {
+	brand.Reset()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/auth/login":
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"token": "tok", "email": "a@b.c"}})
+		case "/keys":
+			if r.Method == "POST" {
+				_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"id": 1, "name": "main", "key": "sk-1"}})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{}})
+		case "/v1/models", "/hk/v1/models", "/us/v1/models":
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": []map[string]any{
+				{"id": "acme-large", "object": "model"},
+				{"id": "acme-small", "object": "model"},
+			}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	cfg := brand.Config{
+		Brand:   brand.Brand{Name: "Acme", ShortName: "Acme"},
+		Account: &brand.Account{BaseURL: srv.URL, Login: "/auth/login", ListKeys: "/keys", CreateKey: "/keys"},
+		Provider: &brand.Provider{
+			ID:   "acme",
+			Name: "Acme Relay",
+			Chat: srv.URL + "/v1",
+			Lines: []brand.Line{
+				{Name: "HK", Chat: srv.URL + "/hk/v1"},
+				{Name: "US", Chat: srv.URL + "/us/v1"},
+			},
+		},
+	}
+	b, _ := json.Marshal(cfg)
+	path := t.TempDir() + "/config.json"
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MAGPIE_BRAND_CONFIG", path)
+	brand.Load(context.Background(), 5e9)
+
+	r := Open()
+	if r == nil {
+		t.Fatal("Open = nil")
+	}
+	if err := r.SignIn(context.Background(), "a@b.c", "pw"); err != nil {
+		t.Fatal(err)
+	}
+	mainID, err := r.AddRelay(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := r.Status().Group; got == "" {
+		t.Fatal("no group over the lines")
+	}
+	// the main provider and one per line
+	lines := 0
+	for _, p := range provider.All() {
+		if p.ID == mainID || strings.Contains(p.Name, "·") {
+			lines++
+		}
+	}
+	if lines < 3 {
+		t.Fatalf("providers from the relay = %d, want the main one and two lines", lines)
+	}
+	// the group's members: each model on each line, lines adjacent
+	g, members, ok := provider.FindGroup("group/" + mainID + "-lines")
+	if !ok || len(members) == 0 {
+		t.Fatalf("group %s = %+v, %v", mainID+"-lines", g, ok)
+	}
+	if len(members) != 6 {
+		t.Fatalf("members = %d, want 2 models on 3 lines", len(members))
 	}
 }

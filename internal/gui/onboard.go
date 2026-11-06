@@ -113,7 +113,7 @@ func onboardRoutes(mux *http.ServeMux) {
 			fail(rw, err)
 			return
 		}
-		writeJSON(rw, map[string]any{"provider": id})
+		writeJSON(rw, map[string]any{"provider": id, "group": run.Status().Group})
 	})
 
 	mux.HandleFunc("POST /api/onboard/connect", func(rw http.ResponseWriter, r *http.Request) {

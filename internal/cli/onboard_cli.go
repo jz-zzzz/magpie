@@ -82,6 +82,9 @@ func onboardCmd(args []string) error {
 			return err
 		}
 		fmt.Println(green.Render("✓"), "relay added as", bold.Render(id))
+		if st := r.Status(); st.Group != "" {
+			fmt.Println(green.Render("✓"), "lines grouped as", bold.Render(st.Group), muted.Render("(a failed line is passed over for the next)"))
+		}
 		return onboardStatus(r)
 	case "connect":
 		ids := args
@@ -140,6 +143,9 @@ func onboardStatus(r *onboard.Runner) error {
 		relay = green.Render(s.Provider)
 	}
 	fmt.Println(line("relay:", relay))
+	if s.Group != "" {
+		fmt.Println(line("lines:", green.Render(s.Group)))
+	}
 	fmt.Println(line("done:", map[bool]string{true: green.Render("yes"), false: muted.Render("no")}[s.Done]))
 	if len(s.Detected) == 0 {
 		fmt.Println(line("agents:", muted.Render("none detected here")))
