@@ -68,7 +68,11 @@ build() {
       ;;
     windows)
       echo "  windows/$arch (app)"
-      make release-windows VERSION="$VERSION" LDFLAGS="$ldflags" >/dev/null
+      # go-winres is run with `go run`, which builds for the host: with
+      # GOOS=windows in the environment it builds a Windows tool and can't
+      # run it here, so the host's are handed to make, whose own go builds
+      # set the target explicitly.
+      env -u GOOS -u GOARCH make release-windows VERSION="$VERSION" LDFLAGS="$ldflags" >/dev/null
       # a zip, so the feed's names line up across platforms
       rm -f "$OUT/$PREFIX-windows-$arch.zip"
       (cd dist && zip -q -9 "../$OUT/$PREFIX-windows-$arch.zip" "magpie-windows-$arch.exe")
