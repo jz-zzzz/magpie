@@ -1,0 +1,20 @@
+{
+  "partners": [
+    {
+      "id": "lyy",
+      "name": "Lyy.team",
+      "kind": "relay",
+      "chat": "https://api2.lyy.team/v1",
+      "responses": "https://api2.lyy.team/v1",
+      "anthropic": "https://api2.lyy.team",
+      "keysUrl": "https://api2.lyy.team/keys",
+      "website": "https://api2.lyy.team",
+      "iconUrl": "https://api2.lyy.team/icon-256.png",
+      "notes": {
+        "zh": "一键接入 Lyy.team，所有模型一个 Key",
+        "en": "Lyy.team — one key for every model"
+      },
+      "langs": ["zh", "en"]
+    }
+  ]
+}

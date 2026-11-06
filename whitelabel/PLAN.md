@@ -199,14 +199,17 @@ magpie 已有的底层能力（无需重造）：agent 配置写入（带标记�
 
 ```
 https://你的站/
-  api/desktop/latest          → feed JSON
-  api/desktop/config.json     → 品牌/业务配置（§3）
-  api/desktop/partners        → 中转站 partner 列表
-  downloads/yourdesk-darwin-arm64.zip
-  downloads/yourdesk-darwin-amd64.zip
-  downloads/yourdesk-windows-amd64.zip
-  downloads/yourdesk-linux-amd64.zip
+  api/desktop/config.json     → 品牌/业务配置（§3）          ← whitelabel/config.lyy.team.json
+  api/desktop/latest          → feed JSON                    ← build.sh feed 生成
+  api/desktop/partners        → 中转站 partner 列表（可选）   ← whitelabel/partners.lyy.team.json
+  downloads/lyy-desktop-darwin-arm64.zip
+  downloads/lyy-desktop-windows-amd64.zip
+  downloads/lyy-desktop-linux-amd64.zip
 ```
+
+`partners` 与 `config.provider` 的分工：`provider` 决定首次引导一键接入的中转站；
+`partners` 让它在「添加 provider」的预设列表里排在赞助商分组（可同时存在，也可省略
+`partners`，客户端会回退上游行为）。
 
 ### 7.2 feed 格式（沿用 magpie 现有格式）
 
@@ -282,12 +285,13 @@ my/release    ←（可选）发布分支，由 dev 合并，打 tag
 - [x] `whitelabel/config.example.json` + `feed.json.example`
 - [x] 验收通过：本地 config 服务 → 更新检查走自定义 feed → `magpie presets` 出现远程 partners 条目
 
-### 阶段 2 · 品牌 UI（部分完成）
+### 阶段 2 · 品牌 UI（已完成）
 - [x] 前端文案覆盖（`i18n.js` 的 `t()` 里替换品牌名，排除 `magpie://` 等标识）
 - [x] `bootPrefs.brand` 注入（形状：name/shortName/site）
 - [x] 引导页骨架（`onboard.js`，无账号 API 的构建自动不显示）
-- [ ] 托盘/窗口图标从配置下载（待做：需要图标 URL 与缓存策略）
-- [ ] 验收：品牌名/图标/官网在窗口、托盘、引导页一致呈现
+- [x] 托盘/窗口图标从配置下载（`internal/brand/icon.go`：PNG 校验、缓存、记录来源
+      URL；macOS/Linux 取剪影，Windows 用彩色；失败回退内置图标）
+- [x] 验收通过：品牌名在窗口、托盘 tooltip 与页面文案一致；标识不受影响
 
 ### 阶段 3 · 账号与一键接入（已完成，待真实环境验收）
 - [x] `internal/account`（sub2api 兼容客户端，路由与字段名全配置化）
