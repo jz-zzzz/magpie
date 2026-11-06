@@ -9,6 +9,8 @@ import (
 	"image/png"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/yetone/magpie/internal/brand"
 )
 
 // A Linux bar's tray icon is the menu bar's bird alone, in one colour on
@@ -25,22 +27,26 @@ var (
 // trayGlyph is trayIcon, the bird's silhouette (a black glyph on
 // transparency), in c: each pixel keeps the glyph's alpha. trayIcon itself
 // when it can't be read, which is still a silhouette.
-func trayGlyph(c color.NRGBA) []byte {
-	src, err := png.Decode(bytes.NewReader(trayIcon))
+func trayGlyph(c color.NRGBA) []byte { return glyphOf(trayIcon, c) }
+
+// glyphOf is src's silhouette in c: each pixel keeps its alpha. src itself
+// when it can't be read, which is still a silhouette.
+func glyphOf(src []byte, c color.NRGBA) []byte {
+	s, err := png.Decode(bytes.NewReader(src))
 	if err != nil {
-		return trayIcon
+		return src
 	}
-	b := src.Bounds()
+	b := s.Bounds()
 	out := image.NewNRGBA(b)
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
-			a := color.NRGBAModel.Convert(src.At(x, y)).(color.NRGBA).A
+			a := color.NRGBAModel.Convert(s.At(x, y)).(color.NRGBA).A
 			out.SetNRGBA(x, y, color.NRGBA{c.R, c.G, c.B, uint8(uint(a) * uint(c.A) / 0xff)})
 		}
 	}
 	var buf bytes.Buffer
 	if png.Encode(&buf, out) != nil {
-		return trayIcon
+		return src
 	}
 	return buf.Bytes()
 }
@@ -49,12 +55,27 @@ func trayGlyph(c color.NRGBA) []byte {
 // image the system tints (the Mac's menu bar): the bird alone on the Mac
 // and Linux (linuxTrayIcon, light saying the desktop prefers a light
 // scheme), the app's coloured icon in Windows' tray, which shows apps' own.
+// A white-label build's own icon, fetched from its config, is a menu bar's
+// silhouette like the bird's, and its colour on Windows.
 func trayIconFor(goos string, light bool) (icon []byte, template bool) {
+	own := brand.IconBytes()
 	switch goos {
 	case "darwin":
+		if own != nil {
+			return glyphOf(own, trayGlyphDark), true
+		}
 		return trayIcon, true
 	case "linux":
+		if own != nil {
+			if light {
+				return glyphOf(own, trayGlyphDark), false
+			}
+			return glyphOf(own, trayGlyphLight), false
+		}
 		return linuxTrayIcon(light), false
+	}
+	if own != nil {
+		return own, false
 	}
 	return winTrayIcon, false
 }

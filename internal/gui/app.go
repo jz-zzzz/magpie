@@ -60,8 +60,12 @@ var appIconLarge []byte
 // appIconFor is the icon the app hands the system: none on a Mac whose
 // bundle has AppIcon.icon compiled in (Assets.car), whose Dock then draws
 // it light or dark as macOS 26 has it, where a picture set at run time
-// stays light, a white tile in a dark Dock (#117).
+// stays light, a white tile in a dark Dock (#117). A white-label build's
+// own icon, fetched from its config, comes before both.
 func appIconFor() []byte {
+	if b := brand.IconBytes(); b != nil {
+		return b
+	}
 	if runtime.GOOS == "darwin" {
 		if exe, err := os.Executable(); err == nil {
 			if _, err := os.Stat(filepath.Join(filepath.Dir(exe), "..", "Resources", "Assets.car")); err == nil {

@@ -260,6 +260,15 @@ func fetchAndClose(ctx context.Context, u string) {
 	if err := fetchOnce(ctx, u); err != nil {
 		fmt.Fprintf(os.Stderr, "brand: %v\n", err)
 	}
+	// the icon, kept for the tray and the window; a config that names none
+	// keeps the build's own
+	if ic := Icon(); iconWanted(ic) {
+		ictx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 60*time.Second)
+		if err := fetchIcon(ictx, ic); err != nil {
+			fmt.Fprintf(os.Stderr, "brand: %v\n", err)
+		}
+		cancel()
+	}
 }
 
 // Wait waits until the first Load has finished, at most timeout: a command
