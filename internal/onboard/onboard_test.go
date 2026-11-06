@@ -190,3 +190,64 @@ func TestAddRelayMakesLinesAndGroup(t *testing.T) {
 		t.Fatalf("members = %d, want 2 models on 3 lines", len(members))
 	}
 }
+
+func TestLinesProbe(t *testing.T) {
+	brand.Reset()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized) // a line answers, its key refused
+	}))
+	defer srv.Close()
+
+	dead := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	deadURL := dead.URL
+	dead.Close() // nothing listens here now
+
+	cfg := brand.Config{
+		Brand:   brand.Brand{Name: "Acme", ShortName: "Acme"},
+		Account: &brand.Account{BaseURL: srv.URL, Login: "/login"},
+		Provider: &brand.Provider{
+			ID:   "acme",
+			Name: "Acme Relay",
+			Chat: srv.URL + "/v1",
+			Lines: []brand.Line{
+				{Name: "HK", Chat: srv.URL + "/hk/v1"},
+				{Name: "US", Chat: deadURL + "/v1"},
+			},
+		},
+	}
+	b, _ := json.Marshal(cfg)
+	path := t.TempDir() + "/config.json"
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MAGPIE_BRAND_CONFIG", path)
+	brand.Load(context.Background(), 5e9)
+
+	r := Open()
+	if r == nil {
+		t.Fatal("Open = nil")
+	}
+	lines := r.Lines(context.Background(), false)
+	if len(lines) != 3 {
+		t.Fatalf("lines = %d, want the main one and two", len(lines))
+	}
+	if lines[0].Probed {
+		t.Fatal("a line was probed without asking")
+	}
+	probed := r.Lines(context.Background(), true)
+	if !probed[0].Probed || !probed[0].OK || probed[0].Latency < 0 {
+		t.Fatalf("main line = %+v", probed[0])
+	}
+	if probed[1].OK == false && probed[1].Error == "" {
+		t.Fatalf("a line with no answer said nothing: %+v", probed[1])
+	}
+	if probed[2].OK {
+		t.Fatalf("a line nothing listens on answered: %+v", probed[2])
+	}
+	if probed[2].Error == "" {
+		t.Fatal("a dead line's error is empty")
+	}
+}

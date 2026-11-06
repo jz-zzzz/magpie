@@ -17,6 +17,7 @@ const onboardUsage = `usage:
   magpie onboard register <email> <password> [code]
   magpie onboard code <email>             email a verification code
   magpie onboard relay                    add the relay with an account key
+  magpie onboard lines [check]            the relay's lines, and how each answers
   magpie onboard connect [<agent>…]       connect agents (every detected one when none named)
   magpie onboard finish                   mark the first run done
   magpie onboard reset                    offer the first run again`
@@ -111,6 +112,26 @@ func onboardCmd(args []string) error {
 		}
 		if len(failed) > 0 {
 			return fmt.Errorf("%d agent(s) failed to connect", len(failed))
+		}
+		return nil
+	case "lines":
+		probe := len(args) > 0 && (args[0] == "check" || args[0] == "--check")
+		lines := r.Lines(ctx, probe)
+		if len(lines) == 0 {
+			fmt.Println(muted.Render("this build's config names no relay"))
+			return nil
+		}
+		for _, ln := range lines {
+			s := fmt.Sprintf("%-8s %s", ln.Name, ln.URL)
+			if !ln.Probed {
+				fmt.Println("  " + s)
+				continue
+			}
+			if ln.OK {
+				fmt.Println("  " + s + "  " + green.Render(fmt.Sprintf("%d ms", ln.Latency)))
+			} else {
+				fmt.Println("  " + s + "  " + amber.Render("no answer: "+ln.Error))
+			}
 		}
 		return nil
 	case "finish":

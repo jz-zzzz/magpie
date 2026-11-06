@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/yetone/magpie/internal/account"
@@ -21,6 +23,7 @@ import (
 	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/provider"
+	"github.com/yetone/magpie/internal/source"
 )
 
 // Status is what a first run shows and what it has done so far.
@@ -258,6 +261,73 @@ func (r *Runner) Connect(ctx context.Context, ids []string) map[string]string {
 func (r *Runner) Finish() error {
 	r.kept.Done = true
 	return r.save()
+}
+
+// LineStatus is one of the relay's lines as it answers now: asked only
+// when the caller wants a probe (Probe), so a page may list them without
+// a request each.
+type LineStatus struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	// Probed is whether the line was asked; Latency and OK mean nothing
+	// before it was.
+	Probed  bool `json:"probed"`
+	OK      bool `json:"ok"`
+	Latency int  `json:"latencyMs,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+// Lines are the relay's lines, the main one first, asked in parallel when
+// probe is set: each line's models endpoint, to time it. A line answering
+// any status has arrived; a key's refusal (401) is still a line that
+// answers, so the timing is the line's.
+func (r *Runner) Lines(ctx context.Context, probe bool) []LineStatus {
+	b := brand.Relay()
+	if b == nil {
+		return nil
+	}
+	out := []LineStatus{{Name: "main", URL: b.Chat}}
+	for _, ln := range b.Lines {
+		out = append(out, LineStatus{Name: ln.Name, URL: ln.Chat})
+	}
+	if !probe {
+		return out
+	}
+	var wg sync.WaitGroup
+	for i := range out {
+		wg.Add(1)
+		go func(s *LineStatus) {
+			defer wg.Done()
+			s.probe(ctx)
+		}(&out[i])
+	}
+	wg.Wait()
+	return out
+}
+
+// probe asks the line's models endpoint and records how it answered.
+func (s *LineStatus) probe(ctx context.Context) {
+	s.Probed = true
+	u := strings.TrimSuffix(s.URL, "/") + "/models"
+	tctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(tctx, "GET", u, nil)
+	if err != nil {
+		s.Error = err.Error()
+		return
+	}
+	start := time.Now()
+	res, err := source.Do(&http.Client{}, req)
+	if err != nil {
+		s.Error = err.Error()
+		return
+	}
+	defer res.Body.Close()
+	s.Latency = int(time.Since(start).Milliseconds())
+	s.OK = res.StatusCode < 500
+	if !s.OK {
+		s.Error = res.Status
+	}
 }
 
 // Reset forgets what the run did, so it is offered again (a test's and a

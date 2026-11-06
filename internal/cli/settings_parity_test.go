@@ -163,6 +163,7 @@ var cliForRoute = map[string]string{
 	"POST /api/update/install":             "magpie update",
 	// whitelabel: a build's first run (internal/gui/onboard.go)
 	"GET /api/onboard":           "magpie onboard",
+	"GET /api/onboard/lines":     "magpie onboard lines",
 	"POST /api/onboard/signin":   "magpie onboard login",
 	"POST /api/onboard/register": "magpie onboard register",
 	"POST /api/onboard/code":     "magpie onboard code",

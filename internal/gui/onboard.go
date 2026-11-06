@@ -133,6 +133,17 @@ func onboardRoutes(mux *http.ServeMux) {
 		writeJSON(rw, map[string]any{"errors": errs, "status": run.Status()})
 	})
 
+	mux.HandleFunc("GET /api/onboard/lines", func(rw http.ResponseWriter, r *http.Request) {
+		run := runner(rw)
+		if run == nil {
+			return
+		}
+		probe := r.URL.Query().Get("probe") != ""
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		writeJSON(rw, map[string]any{"lines": run.Lines(ctx, probe)})
+	})
+
 	mux.HandleFunc("POST /api/onboard/finish", func(rw http.ResponseWriter, r *http.Request) {
 		run := runner(rw)
 		if run == nil {

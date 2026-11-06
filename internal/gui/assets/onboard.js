@@ -45,6 +45,9 @@
   .wl-agent span.what{flex:1}
   .wl-agent small{opacity:.6}
   .wl-note{font-size:12px;opacity:.6;margin-top:14px}
+  .wl-lines{display:flex;flex-direction:column;gap:4px;margin-top:14px}
+  .wl-line{font-size:13px;padding:6px 10px;border-radius:6px;background:rgba(127,127,127,.1)}
+  .wl-line.bad{color:#dc2626}
   `;
 
   async function post(path, body) {
@@ -138,6 +141,23 @@
       const next = el("button", { className: "wl-btn primary", textContent: say("Continue", "继续"), disabled: true });
       body.append(el("div", { className: "wl-row" }, [next]));
       next.onclick = () => show(2);
+      // the lines, timed: which answers, and how fast
+      const linesSoon = () => {
+        const box = el("div", { className: "wl-lines" });
+        body.append(box);
+        fetch("/api/onboard/lines?probe=1")
+          .then((r) => r.json())
+          .then((d) => {
+            for (const ln of d?.lines || []) {
+              const what = ln.ok ? ln.latencyMs + " ms" : say("no answer", "超时");
+              box.append(el("div", {
+                className: "wl-line" + (ln.ok ? "" : " bad"),
+                textContent: ln.name + "  " + what,
+              }));
+            }
+          })
+          .catch(() => {});
+      };
       post("relay")
         .then((out) => {
           note.textContent = say("Done — the relay is added.", "完成，中转站已添加。");
@@ -145,6 +165,7 @@
             note.textContent += " " + say("Its lines fail over to each other.", "线路之间会自动切换。");
           }
           next.disabled = false;
+          linesSoon();
         })
         .catch((e) => {
           note.textContent = "";
