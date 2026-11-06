@@ -226,7 +226,13 @@ https://你的站/
 }
 ```
 
-- 资产名 = `{updates.assetPrefix}-{goos}-{goarch}.zip`（§4.2 接缝后由配置决定）。
+- 资产名（与 `update.AppAsset` / `update.BinaryAsset` 完全一致）：
+  - macOS：`{prefix}-darwin-{arch}.zip`（整个 app 包）
+  - Windows：`{prefix}-windows-{arch}.exe`（裸 exe）
+  - Linux：`{prefix}-linux-{arch}`（裸二进制，无扩展名）
+
+  自动更新是下载后替换自身，**feed 里放 zip 会让更新失败**；官网下载页用的
+  zip 由构建脚本另出一份，只用于手动下载。
 - SHA-256 必填，客户端校验后才安装（沿用上游逻辑）。
 - 版本号保持语义化 `x.y.z`；首版建议从 `1.6.1` 起（对齐参考产品），之后单调递增。
 

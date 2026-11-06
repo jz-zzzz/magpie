@@ -39,7 +39,7 @@ asset_entry() { # asset_entry <file> <name>
   local file="$1" name="$2" sum size
   size=$(wc -c < "$file" | tr -d ' ')
   sum=$(sha256_of "$file")
-  cat > "$OUT/${name%.zip}.asset.json" <<EOF
+  cat > "$OUT/$name.asset.json" <<EOF
 {
   "name": "$name",
   "size": $size,
@@ -73,13 +73,21 @@ build() {
       # run it here, so the host's are handed to make, whose own go builds
       # set the target explicitly.
       env -u GOOS -u GOARCH make release-windows VERSION="$VERSION" LDFLAGS="$ldflags" >/dev/null
-      # a zip, so the feed's names line up across platforms
+      # The feed's asset is the bare exe: an update downloads it and
+      # replaces the binary itself (update.BinaryAsset), so a zip there
+      # would leave the client unable to update.
+      rm -f "$OUT/$PREFIX-windows-$arch.exe"
+      cp "dist/magpie-windows-$arch.exe" "$OUT/$PREFIX-windows-$arch.exe"
+      # a zip beside it, for a download page to hand out
       rm -f "$OUT/$PREFIX-windows-$arch.zip"
       (cd dist && zip -q -9 "../$OUT/$PREFIX-windows-$arch.zip" "magpie-windows-$arch.exe")
       ;;
     linux)
       echo "  linux/$arch (app)"
       make release-linux VERSION="$VERSION" LDFLAGS="$ldflags" >/dev/null
+      # the bare binary, as Windows' exe is (update.BinaryAsset)
+      rm -f "$OUT/$PREFIX-linux-$arch"
+      cp "dist/magpie-linux-$arch" "$OUT/$PREFIX-linux-$arch"
       rm -f "$OUT/$PREFIX-linux-$arch.zip"
       (cd dist && zip -q -9 "../$OUT/$PREFIX-linux-$arch.zip" "magpie-linux-$arch")
       ;;
@@ -89,12 +97,15 @@ build() {
       ;;
   esac
 
-  local name="$PREFIX-$os-$arch.zip"
-  # the client asks for "<prefix>-darwin-<arch>.zip" on a Mac, and
-  # "<prefix>-<os>-<arch>.zip" on Windows and Linux (update.AppAsset and
-  # update.BinaryAsset)
-  if [ "$os" = darwin ]; then name="$PREFIX-darwin-$arch.zip"; fi
-  asset_entry "$OUT/$PREFIX-$os-$arch.zip" "$name"
+  # The feed's name per platform: a zip of the .app on a Mac, the bare
+  # binary elsewhere (update.AppAsset, update.BinaryAsset).
+  local name
+  case "$os" in
+    darwin) name="$PREFIX-darwin-$arch.zip" ;;
+    windows) name="$PREFIX-windows-$arch.exe" ;;
+    *) name="$PREFIX-linux-$arch" ;;
+  esac
+  asset_entry "$OUT/$name" "$name"
 }
 
 feed() {
