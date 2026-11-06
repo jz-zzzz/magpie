@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/appdir"
+	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/lastgood"
 	"github.com/yetone/magpie/internal/source"
 )
@@ -31,8 +32,9 @@ import (
 // from, so adding one, its editor and its key page work as a preset's do.
 
 // PartnersURL is where the list is kept; MAGPIE_PARTNERS moves it, and
-// MAGPIE_PARTNERS=off keeps to none.
-const PartnersURL = "https://usemagpie.ai/api/partners"
+// MAGPIE_PARTNERS=off keeps to none. A white-label build names its own list
+// in its brand config.
+func PartnersURL() string { return brand.PartnersURL() }
 
 // KindPartner is a partner's Kind: the add sheet lists them apart.
 const KindPartner Kind = "partner"
@@ -114,7 +116,7 @@ func partnersSource() string {
 			// names its own
 			return "off"
 		}
-		src = PartnersURL
+		src = PartnersURL()
 	}
 	return src
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/yetone/magpie/internal/agent"
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/backup"
+	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/browsermcp"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/claudebridge"
@@ -220,6 +221,10 @@ func Main(v string) {
 	endProbesOnSignal()
 	gateway.Version = version
 	netproxy.Install()
+	// whitelabel: the build's brand config (name, update feed, partners,
+	// account API) is read once, in the background; commands that must act
+	// on it (update) wait with brand.Wait.
+	brand.Load(context.Background(), 0)
 	update.GUI = hasGUI
 	err = run(os.Args[1:])
 	proc.EndProbes() // a CLI still being asked something isn't left to init
@@ -537,6 +542,8 @@ func run(args []string) error {
 		return presets()
 	case "provider":
 		return providerCmd(args)
+	case "onboard":
+		return onboardCmd(args[1:])
 	case "models":
 		return models(args[1:])
 	case "model":

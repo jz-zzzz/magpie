@@ -33,14 +33,17 @@ import (
 	"time"
 
 	"github.com/yetone/magpie/internal/appdir"
+	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/netproxy"
 	"github.com/yetone/magpie/internal/proc"
 	"github.com/yetone/magpie/internal/rosetta"
 	"github.com/yetone/magpie/internal/source"
 )
 
-// Site is magpie's home; its /api/latest is the update feed.
-const Site = "https://usemagpie.ai"
+// Site is the build's home; its /api/latest is the update feed. A
+// white-label build names its own site in its brand config
+// (internal/brand).
+func Site() string { return brand.Site() }
 
 // Feed is where the newest release is described. MAGPIE_UPDATE_FEED points
 // it elsewhere, for testing an update against a local server.
@@ -48,7 +51,7 @@ func Feed() string {
 	if f := os.Getenv("MAGPIE_UPDATE_FEED"); f != "" {
 		return f
 	}
-	return Site + "/api/latest"
+	return brand.Feed()
 }
 
 // Release is one published version.
@@ -221,12 +224,13 @@ func arch() string {
 	return goarch
 }
 
-// AppAsset and BinaryAsset name the files this machine would install.
-func AppAsset() string { return "magpie-darwin-" + arch() + ".zip" }
+// AppAsset and BinaryAsset name the files this machine would install, under
+// the asset prefix the brand config sets (magpie's when unset).
+func AppAsset() string { return brand.AssetPrefix() + "-darwin-" + arch() + ".zip" }
 func BinaryAsset() string {
-	name := "magpie-cli-" + goos + "-" + arch()
+	name := brand.AssetPrefix() + "-cli-" + goos + "-" + arch()
 	if GUI && goos != "darwin" {
-		name = "magpie-" + goos + "-" + arch()
+		name = brand.AssetPrefix() + "-" + goos + "-" + arch()
 	}
 	if goos == "windows" {
 		name += ".exe"
@@ -1261,7 +1265,7 @@ func fetch(ctx context.Context, a Asset, path string) error {
 	if !strings.EqualFold(fileHash(path), a.SHA256) {
 		err = fmt.Errorf("%s does not match its checksum", name)
 		if u != a.URL {
-			err = fmt.Errorf("%s from the mirror %s does not match its checksum from %s; not installed", name, mirror, Site)
+			err = fmt.Errorf("%s from the mirror %s does not match its checksum from %s; not installed", name, mirror, Site())
 		}
 		return fail(err)
 	}

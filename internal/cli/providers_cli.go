@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/yetone/magpie/internal/agent"
+	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/plugin"
@@ -309,6 +310,9 @@ func usesByProvider() map[string][]string {
 
 // presets: `magpie presets`
 func presets() error {
+	// whitelabel: the partner list — a relay's presets — is the build's,
+	// from its brand config; wait briefly for the read started at startup.
+	brand.Wait(context.Background(), 2*time.Second)
 	have := map[string]bool{}
 	for _, p := range provider.All() {
 		have[p.ID], have[p.Preset] = true, true
@@ -454,6 +458,10 @@ func providerCmd(args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("%s", providerUsage)
 	}
+	// whitelabel: a partner is a preset the build's brand config lists;
+	// wait briefly for the read started at startup, so `provider add
+	// <partner>` finds it.
+	brand.Wait(context.Background(), 2*time.Second)
 	verb, rest := args[1], args[2:]
 	switch verb {
 	case "add":

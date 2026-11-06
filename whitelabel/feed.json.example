@@ -1,0 +1,27 @@
+{
+  "version": "1.6.1",
+  "notes": "## 更新内容\n- 首次发布\n",
+  "url": "https://example.com/desktop",
+  "assets": {
+    "yourdesk-darwin-arm64.zip": {
+      "url": "https://example.com/downloads/yourdesk-darwin-arm64.zip",
+      "size": 12345678,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "yourdesk-darwin-amd64.zip": {
+      "url": "https://example.com/downloads/yourdesk-darwin-amd64.zip",
+      "size": 12345678,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "yourdesk-windows-amd64.zip": {
+      "url": "https://example.com/downloads/yourdesk-windows-amd64.zip",
+      "size": 12345678,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "yourdesk-linux-amd64.zip": {
+      "url": "https://example.com/downloads/yourdesk-linux-amd64.zip",
+      "size": 12345678,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}

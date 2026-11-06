@@ -35,6 +35,7 @@ import (
 	"github.com/yetone/magpie/internal/agent"
 	"github.com/yetone/magpie/internal/applog"
 	"github.com/yetone/magpie/internal/autostart"
+	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/filememo"
 	"github.com/yetone/magpie/internal/fonts"
@@ -1082,6 +1083,15 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 		}
 		// and the settings of those the page draws (kernel.js)
 		boot["pluginConfig"] = builtinConfig(list)
+		// whitelabel: the build's brand name, which the page's copy uses
+		// in place of magpie's
+		if br := brand.Get(); br.Brand.Name != "" {
+			boot["brand"] = map[string]any{
+				"name":      br.Brand.Name,
+				"shortName": br.Brand.ShortName,
+				"site":      br.Brand.Site,
+			}
+		}
 		// on Omarchy the page takes its theme's look before it paints
 		if th, ok := omarchyTheme(); ok {
 			boot["omarchy"] = th
@@ -1401,6 +1411,7 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	updateRoutes(mux, w)
 	whatsNewRoutes(mux)
 	cliBehindRoutes(mux)
+	onboardRoutes(mux)
 	configRepairRoutes(mux, !isWeb(w))
 	gatewayFixRoutes(mux)
 	gatewayModeRoutes(mux)

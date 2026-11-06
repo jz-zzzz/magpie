@@ -18676,10 +18676,22 @@ function intlLang() {
   return /^en(-|$)/i.test(sys) ? sys : "en";
 }
 
+// whitelabel: a build shows its own brand name where the copy says magpie's
+// (bootPrefs.brand, put there by the Go side from the brand config). The
+// identifiers that are not copy keep magpie: magpie:// links, ~/.config/
+// magpie, magpie-cli, /api/magpie. No lookbehind, which an older WKWebView
+// lacks.
+const BRAND_WORD = /(^|[^\w/:.-])([Mm])agpie(?=$|[^\w/:.-])/g;
+function brandCopy(s) {
+  const name = window.bootPrefs?.brand?.shortName;
+  if (!name || name === "magpie") return s;
+  return s.replace(BRAND_WORD, (_, pre) => pre + name);
+}
+
 function t(s, vars) {
   let out = I18N[locale]?.[s] ?? s;
   if (vars) for (const k in vars) out = out.split("{" + k + "}").join(vars[k]);
-  return out;
+  return brandCopy(out);
 }
 
 // tNotice is an agent's advice after a change (state.notice) in the

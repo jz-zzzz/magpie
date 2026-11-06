@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "brand": {
+    "name": "你的桌面助手",
+    "shortName": "你的品牌",
+    "site": "https://example.com",
+    "icon": "https://example.com/icon-256.png"
+  },
+  "updates": {
+    "feed": "https://example.com/api/desktop/latest",
+    "assetPrefix": "yourdesk"
+  },
+  "partners": "https://example.com/api/desktop/partners",
+  "account": {
+    "baseURL": "https://example.com",
+    "login": "/api/v1/auth/login",
+    "register": "/api/v1/auth/register",
+    "sendCode": "/api/v1/auth/send-code",
+    "listKeys": "/api/v1/keys",
+    "createKey": "/api/v1/keys",
+    "listGroups": "/api/v1/groups",
+    "oauthStart": "/api/v1/auth/oauth/start",
+    "oauthPoll": "/api/v1/auth/oauth/poll"
+  },
+  "provider": {
+    "id": "yourrelay",
+    "name": "你的中转站",
+    "kind": "relay",
+    "chat": "https://api.example.com/v1",
+    "responses": "https://api.example.com/v1",
+    "anthropic": "https://api.example.com",
+    "keysUrl": "https://example.com/keys",
+    "website": "https://example.com",
+    "lines": [
+      { "name": "HK", "chat": "https://hk.example.com/v1" },
+      { "name": "US", "chat": "https://us.example.com/v1" }
+    ]
+  },
+  "onboarding": {
+    "welcomeURL": "https://example.com/desktop",
+    "registerURL": "https://example.com/register"
+  }
+}

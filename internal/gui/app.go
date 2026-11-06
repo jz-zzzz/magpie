@@ -22,6 +22,7 @@ import (
 	"github.com/yetone/magpie/internal/agent"
 	"github.com/yetone/magpie/internal/appdir"
 	"github.com/yetone/magpie/internal/autostart"
+	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/library"
 	"github.com/yetone/magpie/internal/omarchy"
@@ -410,13 +411,14 @@ func Run(version string, showMain bool, link string) error {
 		// second launch); it hands its arguments to the running one and quits.
 		// The Mac sends the link to the running app itself.
 		SingleInstance: singleInstance(h),
-		Name:           "magpie",
-		Description:    "one place to pick every agent's model",
-		Icon:           appIconFor(),
-		Assets:         application.AssetOptions{Handler: ownWindow(handler)},
-		Mac:            application.MacOptions{ActivationPolicy: policy},
-		Windows:        windowsOptions(),
-		Linux:          linuxOptions(),
+		// whitelabel: the name a build shows comes from its brand config
+		Name:        brand.Name(),
+		Description: "one place to pick every agent's model",
+		Icon:        appIconFor(),
+		Assets:      application.AssetOptions{Handler: ownWindow(handler)},
+		Mac:         application.MacOptions{ActivationPolicy: policy},
+		Windows:     windowsOptions(),
+		Linux:       linuxOptions(),
 		// A version downloaded but not restarted into is installed on the
 		// way out, so the next launch is the new one.
 		// Quitting doesn't come back to main on a Mac (NSApp terminate:
@@ -577,7 +579,10 @@ func Run(version string, showMain bool, link string) error {
 		h.tray.SetLabel("magpie")
 		go dropTrayName()
 	}
-	h.tray.SetTooltip("magpie")
+	// The label is also the item's id, which Omarchy's bar pins it by, so
+	// it stays magpie's whatever the build shows; the tooltip is the
+	// build's own name (whitelabel).
+	h.tray.SetTooltip(brand.Name())
 	if icon, template := trayIconFor(runtime.GOOS, traySchemeLight()); template {
 		h.tray.SetTemplateIcon(icon)
 	} else {
@@ -796,7 +801,7 @@ func (h *host) setBird(b []byte) {
 func panelOptions(goos, theme string) application.WebviewWindowOptions {
 	o := application.WebviewWindowOptions{
 		Name:            "panel",
-		Title:           "magpie",
+		Title:           brand.Name(),
 		URL:             "/?mode=panel" + theme,
 		Width:           panelWidth,
 		Height:          520,

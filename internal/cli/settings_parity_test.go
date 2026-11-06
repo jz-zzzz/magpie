@@ -161,6 +161,15 @@ var cliForRoute = map[string]string{
 	"POST /api/update/check":               "magpie update check",
 	"POST /api/settings/agent-compact":     "magpie model compact",
 	"POST /api/update/install":             "magpie update",
+	// whitelabel: a build's first run (internal/gui/onboard.go)
+	"GET /api/onboard":           "magpie onboard",
+	"POST /api/onboard/signin":   "magpie onboard login",
+	"POST /api/onboard/register": "magpie onboard register",
+	"POST /api/onboard/code":     "magpie onboard code",
+	"POST /api/onboard/relay":    "magpie onboard relay",
+	"POST /api/onboard/connect":  "magpie onboard connect",
+	"POST /api/onboard/finish":   "magpie onboard finish",
+	"POST /api/onboard/reset":    "magpie onboard reset",
 }
 
 var notYet = map[string]string{

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yetone/magpie/internal/brand"
 	"github.com/yetone/magpie/internal/gateway"
 	"github.com/yetone/magpie/internal/settings"
 	"github.com/yetone/magpie/internal/update"
@@ -192,6 +193,10 @@ func updateCmd(args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
+	// whitelabel: the feed and the asset names are the build's, from its
+	// brand config; the read was started in the background at startup, so
+	// wait for it (briefly) before reading the feed.
+	brand.Wait(ctx, 3*time.Second)
 	ctx = update.WithMirror(update.WithProxy(ctx, proxy), mirror)
 	rel, err := update.Latest(ctx)
 	if err != nil {
@@ -214,11 +219,11 @@ func updateCmd(args []string) error {
 		return nil
 	}
 	if !update.Released(version) {
-		return fmt.Errorf("this magpie was built from source; update it the way you built it, or get the release from %s", update.Site)
+		return fmt.Errorf("this magpie was built from source; update it the way you built it, or get the release from %s", update.Site())
 	}
 	if app := update.Bundle(); app != "" {
 		if update.Stuck(app) != "" {
-			return fmt.Errorf("%s can't be replaced where it is; move magpie to Applications, or download the new version from %s", tilde(app), update.Site)
+			return fmt.Errorf("%s can't be replaced where it is; move magpie to Applications, or download the new version from %s", tilde(app), update.Site())
 		}
 		fmt.Println(muted.Render("  downloading " + update.AppAsset() + via(ctx) + " …"))
 		staged, err := update.Stage(ctx, rel, app)
